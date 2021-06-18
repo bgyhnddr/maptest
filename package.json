@@ -1,0 +1,17 @@
+{
+  "name": "node_docker_demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "koa": "^2.13.1",
+    "koa-static": "^5.0.0",
+    "koa-static-server": "^1.5.2",
+    "streaming-json-stringify": "^3.1.0"
+  }
+}

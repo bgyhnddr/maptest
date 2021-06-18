@@ -1,0 +1,31 @@
+<script>
+  function test() {
+    fetch('/stream')
+      // Retrieve its body as ReadableStream
+      .then((response) => response.body)
+      .then((body) => {
+        const reader = body.getReader()
+        readData(reader)
+      })
+  }
+
+  function readData(reader) {
+    return reader.read().then(({ done, value }) => {
+      if (done) {
+        return
+      } else {
+        console.log(value.toString('utf8'))
+
+        console.log(String.fromCharCode.apply(null, value))
+
+        console.log(
+          decodeURIComponent(escape(String.fromCharCode.apply(null, value))),
+        )
+        return readData(reader)
+      }
+    })
+  }
+</script>
+
+<button onclick="test()">test</button>
+<div>hello</div>

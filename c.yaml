@@ -1,0 +1,68 @@
+affinity: {}
+config:
+  data: null
+  enabled: false
+  mountPath: /conf
+deployment:
+  additionalContainers: null
+  additionalVolumes: null
+  annotations: {}
+  initContainers: {}
+  postStart:
+    command: null
+deploymentStrategy: {}
+env: []
+extraContainers: {}
+healthCheck:
+  enabled: false
+  httpPath: /
+  livenessInitialDelaySeconds: 30
+  livenessPeriodSeconds: 10
+  port: web
+  readinessInitialDelaySeconds: 10
+  readinessPeriodSeconds: 10
+  type: tcp
+image:
+  imagePullSecrets: {}
+  pullPolicy: Always
+  repository: reg.utcook.com/pub/community_kitchen_web
+  tag: deploy-05460411
+ingress:
+  annotations: {}
+  enabled: true
+  hosts:
+    - shopdev.utcook.com
+  path: /
+  tls:
+    - hosts:
+        - shopdev.utcook.com
+      secretName: all-utcook
+labels: {}
+nodeSelector: {}
+persistentVolume:
+  accessMode: ReadWriteOnce
+  annotations: {}
+  enabled: false
+  existingClaim: {}
+  mountPaths: []
+  size: 1Gi
+  storageClass: '-'
+podAnnotations: {}
+replicaCount: 1
+resources: {}
+secret:
+  data: null
+  enabled: false
+  mountPath: /etc/secret-volume
+  readOnly: true
+service:
+  name: cook-kitchen-web
+  ports:
+    web:
+      port: 80
+      protocol: TCP
+  type: ClusterIP
+startCommand: []
+statefulset:
+  enabled: false
+tolerations: []

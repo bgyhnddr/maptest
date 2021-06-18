@@ -1,0 +1,70 @@
+affinity: {}
+config:
+  data: null
+  enabled: false
+  mountPath: /conf
+deployment:
+  additionalContainers: null
+  additionalVolumes: null
+  annotations: {}
+  initContainers: {}
+  postStart:
+    command: null
+deploymentStrategy: {}
+env: []
+extraContainers: {}
+healthCheck:
+  enabled: false
+  httpPath: /
+  livenessInitialDelaySeconds: 30
+  livenessPeriodSeconds: 10
+  port: web
+  readinessInitialDelaySeconds: 10
+  readinessPeriodSeconds: 10
+  type: tcp
+image:
+  registry: docker.io 
+  repository: reg.utcook.com/pub/node_test
+  tag: latest
+  pullPolicy: Always  # IfNotPresent: 有则不拉（减少流量和操作步骤），Always: 不管tag总拉（适合tag不变时更新）
+  pullSecrets: []   # 如果需要docker仓库验证
+  #  - private-registry-key
+ingress:
+  annotations: {}
+  enabled: true
+  hosts:
+    - ws-node-demo.utcook.com
+  path: /
+  tls:
+    - hosts:
+        - ws-node-demo.utcook.com
+      secretName: all-utcook
+labels: {}
+nodeSelector: {}
+persistentVolume:
+  accessMode: ReadWriteOnce
+  annotations: {}
+  enabled: false
+  existingClaim: {}
+  mountPaths: []
+  size: 1Gi
+  storageClass: '-'
+podAnnotations: {}
+replicaCount: 1
+resources: {}
+secret:
+  data: null
+  enabled: false
+  mountPath: /etc/secret-volume
+  readOnly: true
+service:
+  name: websocket-node
+  ports:
+    web:
+      port: 80
+      protocol: TCP
+  type: ClusterIP
+startCommand: []
+statefulset:
+  enabled: false
+tolerations: []

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>convert example</title>
+    <script src="https://unpkg.com/tile-lnglat-transform"></script>
+    <script src="convert.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.3.3/proj4.js"></script>
+    <script src="shp2geo/lib/jszip.js"></script>
+    <script src="shp2geo/lib/jszip-utils.js"></script>
+    <script src="shp2geo/preprocess.js"></script>
+    <script src="shp2geo/preview.js"></script>
+  </head>
+  <body>
+    <h2>My Map</h2>
+    <input id="lnglat" type="text" />
+    <button onclick="getImage()">获取</button>
+    <select id="levelSelector">
+      <option value="0">0</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="11">11</option>
+      <option value="12">12</option>
+      <option value="13">13</option>
+      <option value="14">14</option>
+      <option selected value="15">15</option>
+      <option value="16">16</option>
+      <option value="17">17</option>
+      <option value="18">18</option>
+    </select>
+    <span id="offsetSpan"></span>
+    <div style="position: relative;">
+      <div
+        id="point"
+        style="
+          position: absolute;
+          background-color: black;
+          width: 10px;
+          height: 10px;
+          border-radius: 10px;
+        "
+      ></div>
+      <img id="map" />
+    </div>
+    <script>
+      function getImage() {
+        var level = levelSelector.value
+        var [lng, lat] = lnglat.value.split(',')
+        console.log(lng, lat)
+
+        var {
+          tileX,
+          tileY,
+        } = TileLnglatTransform.TileLnglatTransformGaode.lnglatToTile(
+          parseFloat(lng),
+          parseFloat(lat),
+          parseInt(level),
+        )
+        console.log(tileX, tileY, level)
+
+        var {
+          pixelX,
+          pixelY,
+        } = TileLnglatTransform.TileLnglatTransformGaode.lnglatToPixel(
+          parseFloat(lng),
+          parseFloat(lat),
+          parseInt(level),
+        )
+        point.style.top = `${pixelY}px`
+        point.style.left = `${pixelX}px`
+        map.src = `https://wprd03.is.autonavi.com/appmaptile?style=7&x=${tileX}&y=${tileY}&z=${level}`
+      }
+    </script>
+    <div></div>
+    <input id="fileSelector" onchange="chooseFile(this)" type="file" />
+    <div>
+      <canvas id="mapCanvas"></canvas>
+    </div>
+    <script>
+      let points, currentLevel, currentTile1, currentTile2
+      let mapCanvas = document.getElementById('mapCanvas')
+      let ctx = mapCanvas.getContext('2d')
+      let bufferCanvas = document.createElement('canvas')
+      let bufferCtx = bufferCanvas.getContext('2d')
+
+      let cursorPoint = [0, 0]
+
+      let lastPoint
+
+      let finding = false
+
+      mapCanvas.addEventListener(
+        'mousemove',
+        (event) => {
+          if (finding) return
+          if (!points) return
+
+          let x = (event.offsetX * mapCanvas.width) / mapCanvas.clientWidth
+          let y = (event.offsetY * mapCanvas.height) / mapCanvas.clientHeight
+
+          let point = pickPoint(points, x, y)
+
+          if (lastPoint) {
+            if (
+              !point ||
+              lastPoint.pos[0] != point.pos[0] ||
+              lastPoint.pos[1] != point.pos[1]
+            ) {
+              ctx.beginPath()
+              ctx.arc(lastPoint.pos[0], lastPoint.pos[1], 5, 0, 2 * Math.PI)
+              ctx.fillStyle = 'black'
+              ctx.fill()
+            }
+          }
+          lastPoint = point
+
+          if (point) {
+            ctx.beginPath()
+            ctx.arc(point.pos[0], point.pos[1], 5, 0, 2 * Math.PI)
+            ctx.fillStyle = 'red'
+            ctx.fill()
+
+            console.log(point.name)
+
+            drawImage(...point.gps, parseInt(levelSelector.value))
+          }
+        },
+        false,
+      )
+
+      let drawImage = (lng, lat, level) => {
+        let tile = TileLnglatTransform.TileLnglatTransformGaode.lnglatToTile(
+          lng,
+          lat,
+          level,
+        )
+
+        let pixel = TileLnglatTransform.TileLnglatTransformGaode.lnglatToPixel(
+          lng,
+          lat,
+          level,
+        )
+
+        let offsetX = 128.5 - pixel.pixelX
+        let offsetY = 128.5 - pixel.pixelY
+        let x = currentTile2.tileX - currentTile1.tileX
+        offsetSpan.innerHTML = JSON.stringify([offsetX, offsetY])
+        let images = [
+          new Image(256, 256),
+          new Image(256, 256),
+          new Image(256, 256),
+          new Image(256, 256),
+        ]
+
+        images[0].src = `https://wprd03.is.autonavi.com/appmaptile?style=7&x=${tile.tileX}&y=${tile.tileY}&z=${level}`
+        images[1].src = `https://wprd03.is.autonavi.com/appmaptile?style=7&x=${
+          tile.tileX + (offsetX > 0 ? -1 : 1)
+        }&y=${tile.tileY}&z=${level}`
+        images[2].src = `https://wprd03.is.autonavi.com/appmaptile?style=7&x=${
+          tile.tileX
+        }&y=${tile.tileY + (offsetY > 0 ? -1 : 1)}&z=${level}`
+        images[3].src = `https://wprd03.is.autonavi.com/appmaptile?style=7&x=${
+          tile.tileX + (offsetX > 0 ? -1 : 1)
+        }&y=${tile.tileY + (offsetY > 0 ? -1 : 1)}&z=${level}`
+
+        let loaded = 0
+
+        images.forEach((o) => {
+          o.onload = function () {
+            loaded++
+            if (loaded >= 4) {
+              drawAll()
+            }
+          }
+        })
+        var drawAll = () => {
+          ctx.clearRect((x + 1) * 256, 0, 256, 256)
+          ctx.drawImage(
+            images[0],
+            offsetX < 0 ? -offsetX : 0,
+            offsetY < 0 ? -offsetY : 0,
+            256 - Math.abs(offsetX),
+            256 - Math.abs(offsetY),
+            (x + 1) * 256 + (offsetX > 0 ? offsetX : 0),
+            offsetY > 0 ? offsetY : 0,
+            256 - Math.abs(offsetX),
+            256 - Math.abs(offsetY),
+          )
+
+          ctx.drawImage(
+            images[1],
+            offsetX > 0 ? 256 - offsetX : 0,
+            offsetY > 0 ? 0 : -offsetY,
+            offsetX > 0 ? offsetX : -offsetX,
+            256 - Math.abs(offsetY),
+            (x + 1) * 256 + (offsetX > 0 ? 0 : 256 + offsetX),
+            offsetY > 0 ? offsetY : 0,
+            Math.abs(offsetX),
+            256 - Math.abs(offsetY),
+          )
+
+          ctx.drawImage(
+            images[2],
+            offsetX < 0 ? -offsetX : 0,
+            offsetY > 0 ? 256 - offsetY : 0,
+            256 - Math.abs(offsetX),
+            offsetY > 0 ? offsetY : -offsetY,
+            (x + 1) * 256 + (offsetX > 0 ? offsetX : 0),
+            offsetY > 0 ? 0 : 256 + offsetY,
+            256 - Math.abs(offsetX),
+            Math.abs(offsetY),
+          )
+
+          ctx.drawImage(
+            images[3],
+            offsetX > 0 ? 256 - offsetX : 0,
+            offsetY > 0 ? 256 - offsetY : 0,
+            offsetX > 0 ? offsetX : -offsetX,
+            offsetY > 0 ? offsetY : -offsetY,
+            (x + 1) * 256 + (offsetX > 0 ? 0 : 256 + offsetX),
+            offsetY > 0 ? 0 : 256 + offsetY,
+            Math.abs(offsetX),
+            Math.abs(offsetY),
+          )
+
+          ctx.beginPath()
+          ctx.arc((x + 1) * 256 + 128.5, 128.5, 5, 0, 2 * Math.PI)
+          ctx.fillStyle = 'red'
+          ctx.fill()
+        }
+      }
+
+      let pickPoint = (points, x, y) => {
+        for (var i = 0; i < points.length; i++) {
+          if (isInCircle(x, y, points[i].pos[0], points[i].pos[1], 5)) {
+            return points[i]
+          }
+        }
+      }
+
+      let featuresToPoints = (features, level, tile1, tile2) => {
+        return features.map((o) => {
+          let gps = wgs84togcj02(...o.geometry.coordinates)
+          let tile = TileLnglatTransform.TileLnglatTransformGaode.lnglatToTile(
+            ...gps,
+            level,
+          )
+
+          let pixel = TileLnglatTransform.TileLnglatTransformGaode.lnglatToPixel(
+            ...gps,
+            level,
+          )
+
+          let posX = tile.tileX - tile1.tileX
+          let posY = tile.tileY - tile1.tileY
+
+          return {
+            name: o.properties.NAME,
+            pos: [256 * posX + pixel.pixelX, 256 * posY + pixel.pixelY],
+            gps,
+          }
+        })
+      }
+
+      let drawPoints = (points) => {
+        points.forEach((o) => {
+          ctx.beginPath()
+          ctx.arc(o.pos[0], o.pos[1], 5, 0, 2 * Math.PI)
+          ctx.fillStyle = 'black'
+          ctx.fill()
+        })
+      }
+
+      function distance(x1, y1, x2, y2) {
+        let dis2 = Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2))
+        return dis2
+      }
+      function isInCircle(px, py, x, y, r) {
+        return distance(px, py, x, y) <= r
+      }
+
+      function chooseFile(e) {
+        console.log('chooseFile trigger')
+        loadMap(e.files[0])
+      }
+
+      function loadMap(path) {
+        loadshp(
+          {
+            url: path, // path or your upload file
+            encoding: 'gb2312', // default utf-8
+            EPSG: 3826, // default 4326
+          },
+          function (geojson) {
+            points = geojson
+
+            var lngc = Math.abs(geojson.bbox[0] - geojson.bbox[2])
+            console.log('lngc', lngc)
+            var levelCount = Math.log((360 / lngc) * 3) / Math.log(2)
+
+            var level = Math.ceil(levelCount)
+
+            if (level > 18) {
+              level = 18
+            }
+            currentLevel = level
+            var tile1 = TileLnglatTransform.TileLnglatTransformGaode.lnglatToTile(
+              ...wgs84togcj02(
+                parseFloat(geojson.bbox[0]),
+                parseFloat(geojson.bbox[3]),
+              ),
+              level,
+            )
+
+            var tile2 = TileLnglatTransform.TileLnglatTransformGaode.lnglatToTile(
+              ...wgs84togcj02(
+                parseFloat(geojson.bbox[2]),
+                parseFloat(geojson.bbox[1]),
+              ),
+              level,
+            )
+            // geojson returned
+            console.log('geojson', tile1, tile2)
+
+            currentTile1 = tile1
+            currentTile2 = tile2
+
+            let x = tile2.tileX - tile1.tileX
+            let y = tile2.tileY - tile1.tileY
+            mapCanvas.style.width = '1280px'
+            bufferCanvas.width = 256 * (x + 1)
+            mapCanvas.width = 256 * (x + 2)
+            mapCanvas.height = bufferCanvas.height = 256 * (y + 1)
+            let canvasHeight = (1024 * (y + 1)) / (x + 1)
+            mapCanvas.style.height = `${canvasHeight}px`
+
+            let done = (y + 1) * (x + 1)
+
+            for (let j = 0; j <= y; j++) {
+              for (let i = 0; i <= x; i++) {
+                let image = new Image(256, 256)
+                image.src = `https://wprd03.is.autonavi.com/appmaptile?style=7&x=${
+                  tile1.tileX + i
+                }&y=${tile1.tileY + j}&z=${level}`
+                image.onload = function () {
+                  bufferCtx.drawImage(this, i * 256, j * 256, 256, 256)
+
+                  done--
+                  if (done == 0) {
+                    ctx.drawImage(
+                      bufferCanvas,
+                      0,
+                      0,
+                      bufferCanvas.width,
+                      bufferCanvas.height,
+                      0,
+                      0,
+                      bufferCanvas.width,
+                      bufferCanvas.height,
+                    )
+
+                    points = []
+                    console.log(geojson.features)
+                    doTask((task) => {
+                      if (task && currentTile1 && currentTile2) {
+                        points.push(
+                          ...featuresToPoints(
+                            [task],
+                            currentLevel,
+                            currentTile1,
+                            currentTile2,
+                          ),
+                        )
+                      }
+                    }, geojson.features)
+                      .then(() => {
+                        console.log('task1 done')
+                        doTask((point) => {
+                          drawPoints([point])
+                        }, points)
+                      })
+                      .then(() => {
+                        console.log('task2 done')
+                      })
+                  }
+                }
+              }
+            }
+          },
+        )
+      }
+      function doTask(work, tasks) {
+        let cursor = 0,
+          abort = false
+        return new Promise((resolve, reject) => {
+          function render(deadline) {
+            while (
+              (deadline.timeRemaining() > 0 || deadline.didTimeout) &&
+              tasks.length > 0
+            ) {
+              if (tasks.length > cursor) {
+                work(tasks[cursor])
+              } else {
+                resolve()
+                return
+              }
+              cursor++
+            }
+
+            if (tasks.length > cursor) {
+              requestIdleCallback(render, { timeout: 1000 })
+            } else {
+              resolve()
+              return
+            }
+          }
+
+          requestIdleCallback(render, { timeout: 1000 })
+        })
+      }
+
+      loadMap('/map.zip')
+    </script>
+  </body>
+</html>
